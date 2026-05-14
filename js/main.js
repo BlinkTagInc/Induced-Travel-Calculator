@@ -1,5 +1,6 @@
 var data = {}
 var msas
+var emissionsFactors
 var page = $('html, body')
 
 page.on("scroll mousedown wheel DOMMouseScroll mousewheel keyup touchmove", function() {
@@ -64,14 +65,18 @@ function pluralize(singular, plural, count) {
 
 function formatAsBillions(value) {
   if (value > 1000) {
-    return `${roundToOneDecimal(value / 1000)} billion`
+    return `${round(value / 1000)} billion`
   }
 
   return `${Math.round(value)} million`
 }
 
-function roundToOneDecimal(value) {
-  return (Math.round(value * 10 ) / 10).toFixed(1)
+function round(value, numberOfDecimals = 1) {
+  return formatNumber(Math.round(value * 10 ** numberOfDecimals ) / 10 ** numberOfDecimals)
+}
+
+function formatNumber(value) {
+  return value.toLocaleString('en-US')
 }
 
 $('#selectYear').change(function() {
@@ -146,6 +151,7 @@ $('#vmtForm').submit(function(e) {
   }
 
   var countyData
+  var emissionsFactor
 
   if (facilityType === 'class1') {
     var msaData = _.find(msas, {msa: msa.toUpperCase()})
@@ -153,16 +159,24 @@ $('#vmtForm').submit(function(e) {
     countyData = _.filter(data[year], function(item) {
       return _.includes(msaData.counties, item.county)
     })
+
+    emissionsFactor = _.meanBy(msaData.counties, function(county) {
+      return emissionsFactors[county.toUpperCase()]?.[year]?.overall || 0
+    })
   } else if (facilityType === 'class2-3') {
     countyData = _.filter(data[year], {county: county.toUpperCase()})
+    emissionsFactor = emissionsFactors[county.toUpperCase()]?.[year]?.overall || 0
   }
 
   var results = sumCounties(countyData, facilityType)
   var elasticity = facilityType === 'class1' ? 1 : 0.75
-  var newVMT = roundToOneDecimal(newLaneMiles / results.laneMiles * results.vmt * elasticity)
-  var newVMTLowConfidence = roundToOneDecimal(newVMT * 0.8)
-  var newVMTHighConfidence = roundToOneDecimal(newVMT * 1.2)
-  var currentLaneMiles = roundToOneDecimal(results.laneMiles)
+  var newVMT = round(newLaneMiles / results.laneMiles * results.vmt * elasticity)
+  var newVMTLowConfidence = round(newVMT * 0.8)
+  var newVMTHighConfidence = round(newVMT * 1.2)
+  var currentLaneMiles = round(results.laneMiles, 0)
+
+  // Emissions = newVMT * Emissions Factor (VMT is in millions of miles, emissions factor is in grams so result is in metric tons)
+  var emissions = round(newLaneMiles / results.laneMiles * results.vmt * elasticity * emissionsFactor, 0)
 
   $('#resultsNone').toggle(results.laneMiles === 0);
   $('#resultsExist').toggle(results.laneMiles !== 0);
@@ -187,6 +201,8 @@ $('#vmtForm').submit(function(e) {
     $('#newLaneMiles').text(newLaneMiles + ' lane miles')
     $('#newVMT').text(newVMT + ' million')
     $('#newVMTConfidence').text(`${newVMTLowConfidence} - ${newVMTHighConfidence} million VMT`)
+    $('#newLaneMiles2').text(newLaneMiles + ' lane miles')
+    $('#emissions').html(emissions + ' metric tons of CO<sub>2</sub>e')
     $('#msaNotes').html('<p><small>' + msa + ' MSA consists of ' + countyData.length + ' ' + pluralize('county','counties', countyData.length) + ' (' + formatCountyList(countyData) + ').</small></p>')
     $('#geographyNameNone').text(msa + ' MSA')
   } else if (facilityType === 'class2-3') {
@@ -198,6 +214,8 @@ $('#vmtForm').submit(function(e) {
     $('#newLaneMiles').text(newLaneMiles + ' lane miles')
     $('#newVMT').text(newVMT + ' million')
     $('#newVMTConfidence').text(`${newVMTLowConfidence} - ${newVMTHighConfidence} million VMT`)
+    $('#newLaneMiles2').text(newLaneMiles + ' lane miles')
+    $('#emissions').html(emissions + ' metric tons of CO<sub>2</sub>e')
     $('#msaNotes').html('')
     $('#geographyNameNone').text(county + ' County')
   }
@@ -240,11 +258,21 @@ const fetchMSAs = async () => {
   msas = await response.json()
 }
 
+const fetchEmissionsFactors = async () => {
+  const response = await fetch('/data/emissions-factors.json')
+  if (!response.ok) {
+    console.error('Failed to fetch Emissions Factors')
+    return
+  }
+  emissionsFactors = await response.json()
+}
+
 // On page load, get data
 ['2024', '2023', '2022', '2019', '2018', '2017', '2016'].forEach(year => {
   fetchYearData(year)
 })
 fetchMSAs()
+fetchEmissionsFactors()
 
 // On page load, if there is a selection, trigger change
 if ($('[name="facilityType"]:checked').val()) {
