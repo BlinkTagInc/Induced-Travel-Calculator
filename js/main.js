@@ -93,6 +93,10 @@ $('#selectYear').change(function() {
     .val('')
     .parents('.form-group').hide()
 
+  $('#emissionsYear')
+    .val('2050')
+    .parents('.form-group').hide()
+
   $('#results').hide()
 })
 
@@ -113,6 +117,10 @@ $('[name="facilityType"]').change(function() {
     .val('')
     .parents('.form-group').hide()
 
+  $('#emissionsYear')
+    .val('2050')
+    .parents('.form-group').hide()
+
   $('#results').hide()
 })
 
@@ -121,11 +129,16 @@ $('#selectMSA, #selectCounty').change(function() {
 
   if ($(this).val() === '') {
     $('#inputLaneMiles').parents('.form-group').hide()
+    $('#emissionsYear')
+      .val('2050')
+      .parents('.form-group').hide()
+
     return
   }
 
   $('#results').hide()
   $('#inputLaneMiles').parents('.form-group').slideDown()
+  $('#emissionsYear').parents('.form-group').slideDown()
 })
 
 $('#vmtForm').submit(function(e) {
@@ -138,6 +151,7 @@ $('#vmtForm').submit(function(e) {
   var newLaneMiles = parseFloat($('#inputLaneMiles').val())
   var county = $('#selectCounty').val()
   var msa = $('#selectMSA').val()
+  var emissionsYear = $('#emissionsYear').val()
 
   $('#inputLaneMiles').removeClass('is-invalid')
 
@@ -161,11 +175,11 @@ $('#vmtForm').submit(function(e) {
     })
 
     emissionsFactor = _.meanBy(msaData.counties, function(county) {
-      return emissionsFactors[county.toUpperCase()]?.[year]?.overall || 0
+      return emissionsFactors[county.toUpperCase()]?.[emissionsYear]?.overall || 0
     })
   } else if (facilityType === 'class2-3') {
     countyData = _.filter(data[year], {county: county.toUpperCase()})
-    emissionsFactor = emissionsFactors[county.toUpperCase()]?.[year]?.overall || 0
+    emissionsFactor = emissionsFactors[county.toUpperCase()]?.[emissionsYear]?.overall || 0
   }
 
   var results = sumCounties(countyData, facilityType)
