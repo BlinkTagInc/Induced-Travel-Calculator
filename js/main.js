@@ -187,13 +187,13 @@ $('#vmtForm').submit(function(e) {
 
   var results = sumCounties(countyData, facilityType)
   var elasticity = facilityType === 'class1' ? 1 : 0.75
-  var newVMT = round(newLaneMiles / results.laneMiles * results.vmt * elasticity)
-  var newVMTLowConfidence = round(newVMT * 0.8)
-  var newVMTHighConfidence = round(newVMT * 1.2)
-  var currentLaneMiles = round(results.laneMiles, 0)
+  var newVMT = newLaneMiles / results.laneMiles * results.vmt * elasticity
+  var newVMTLowConfidence = newVMT * 0.8
+  var newVMTHighConfidence = newVMT * 1.2
+  var currentLaneMiles = results.laneMiles
 
   // Emissions = newVMT * Emissions Factor (VMT is in millions of miles, emissions factor is in grams so result is in metric tons)
-  var emissions = round(newLaneMiles / results.laneMiles * results.vmt * elasticity * emissionsFactor, 0)
+  var emissions = newLaneMiles / results.laneMiles * results.vmt * elasticity * emissionsFactor
 
   $('#resultsNone').toggle(results.laneMiles === 0);
   $('#resultsExist').toggle(results.laneMiles !== 0);
@@ -206,33 +206,33 @@ $('#vmtForm').submit(function(e) {
     $('#resultsNoneOther').show()
   }
 
-  $('#resultsMain').text(newVMT + ' million additional VMT/year')
+  $('#resultsMain').text(round(newVMT) + ' million additional VMT/year')
   $('#yearName').text(year)
 
   if (facilityType === 'class1') {
     $('#geographyName').text(msa + ' MSA')
     $('#facilityType').text('Interstate highway')
-    $('#currentLaneMiles').text(currentLaneMiles + ' lane miles')
+    $('#currentLaneMiles').text(round(currentLaneMiles, 0) + ' lane miles')
     $('#currentVMT').text(formatAsBillions(results.vmt))
     $('#elasticity').text('1.0')
     $('#newLaneMiles').text(newLaneMiles + ' lane miles')
-    $('#newVMT').text(newVMT + ' million')
-    $('#newVMTConfidence').text(`${newVMTLowConfidence} - ${newVMTHighConfidence} million VMT`)
+    $('#newVMT').text(round(newVMT) + ' million')
+    $('#newVMTConfidence').text(`${round(newVMTLowConfidence)} - ${round(newVMTHighConfidence)} million VMT`)
     $('#newLaneMiles2').text(newLaneMiles + ' lane miles')
-    $('#emissions').html(emissions + ' metric tons of CO<sub>2</sub>e')
+    $('#emissions').html(round(emissions, 0) + ' metric tons of CO<sub>2</sub>e')
     $('#msaNotes').html('<p><small>' + msa + ' MSA consists of ' + countyData.length + ' ' + pluralize('county','counties', countyData.length) + ' (' + formatCountyList(countyData) + ').</small></p>')
     $('#geographyNameNone').text(msa + ' MSA')
   } else if (facilityType === 'class2-3') {
     $('#geographyName').text(county + ' County')
     $('#facilityType').text('Caltrans-managed class 2 and 3 facilities')
-    $('#currentLaneMiles').text(currentLaneMiles + ' lane miles')
+    $('#currentLaneMiles').text(round(currentLaneMiles, 0) + ' lane miles')
     $('#currentVMT').text(formatAsBillions(results.vmt) + ' million')
     $('#elasticity').text('0.75')
     $('#newLaneMiles').text(newLaneMiles + ' lane miles')
-    $('#newVMT').text(newVMT + ' million')
-    $('#newVMTConfidence').text(`${newVMTLowConfidence} - ${newVMTHighConfidence} million VMT`)
+    $('#newVMT').text(round(newVMT) + ' million')
+    $('#newVMTConfidence').text(`${round(newVMTLowConfidence)} - ${round(newVMTHighConfidence)} million VMT`)
     $('#newLaneMiles2').text(newLaneMiles + ' lane miles')
-    $('#emissions').html(emissions + ' metric tons of CO<sub>2</sub>e')
+    $('#emissions').html(round(emissions, 0) + ' metric tons of CO<sub>2</sub>e')
     $('#msaNotes').html('')
     $('#geographyNameNone').text(county + ' County')
   }
