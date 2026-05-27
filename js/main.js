@@ -162,6 +162,9 @@ $('#vmtForm').submit(function(e) {
   } else if (newLaneMiles < 0) {
     $('#inputLaneMiles').addClass('is-invalid')
     alert('This calculator cannot be used to estimate VMT effects of capacity reductions or lane type conversions.')
+  } else if (newLaneMiles > 1_000_000) {
+    $('#inputLaneMiles').addClass('is-invalid')
+    alert('This calculator cannot be used to estimate VMT effects for projects over 1,000,000 lane miles.')
   }
 
   var countyData
