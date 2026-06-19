@@ -1,6 +1,7 @@
 var data = {}
 var msas
 var emissionsFactors
+var countyPopulations
 var page = $('html, body')
 
 page.on("scroll mousedown wheel DOMMouseScroll mousewheel keyup touchmove", function() {
@@ -177,9 +178,17 @@ $('#vmtForm').submit(function(e) {
       return _.includes(msaData.counties, item.county)
     })
 
-    emissionsFactor = _.meanBy(msaData.counties, function(county) {
-      return emissionsFactors[county.toUpperCase()]?.[emissionsYear]?.overall || 0
-    })
+    const populationsByYear = countyPopulations?.[emissionsYear] ?? {}
+    const { weightedSum, totalPopulation } = msaData.counties.reduce(function(memo, county) {
+      const factor = emissionsFactors[county.toUpperCase()]?.[emissionsYear]?.overall || 0
+      const popKey = Object.keys(populationsByYear).find(k => k.toUpperCase() === county.toUpperCase())
+      const population = popKey ? populationsByYear[popKey] : 0
+      memo.weightedSum += factor * population
+      memo.totalPopulation += population
+
+      return memo
+    }, { weightedSum: 0, totalPopulation: 0 })
+    emissionsFactor = totalPopulation > 0 ? weightedSum / totalPopulation : 0
   } else if (facilityType === 'class2-3') {
     countyData = _.filter(data[year], {county: county.toUpperCase()})
     emissionsFactor = emissionsFactors[county.toUpperCase()]?.[emissionsYear]?.overall || 0
@@ -284,12 +293,22 @@ const fetchEmissionsFactors = async () => {
   emissionsFactors = await response.json()
 }
 
+const fetchCountyPopulations = async () => {
+  const response = await fetch('/data/county-populations.json')
+  if (!response.ok) {
+    console.error('Failed to fetch County Populations')
+    return
+  }
+  countyPopulations = await response.json()
+}
+
 // On page load, get data
 ['2024', '2023', '2022', '2019', '2018', '2017', '2016'].forEach(year => {
   fetchYearData(year)
 })
 fetchMSAs()
 fetchEmissionsFactors()
+fetchCountyPopulations()
 
 // On page load, if there is a selection, trigger change
 if ($('[name="facilityType"]:checked').val()) {
